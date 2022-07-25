@@ -1,41 +1,43 @@
-import { useEffect, useState } from "react";
-import reactLogo from "./assets/react.svg";
+import { Suspense } from "react";
+import {
+  RelayEnvironmentProvider,
+  loadQuery,
+  usePreloadedQuery,
+  graphql,
+  useFragment,
+} from "react-relay/hooks";
+import RelayEnvironment from "./RelayEnv";
+import type { AppQuery } from "graph/AppQuery.graphql";
 
-function App() {
-  const [name, setName] = useState(``);
-  useEffect(() => {
-    let isMounted = true;
-    Fetch(`
-    query RepositoryNameQuery {
-      # feel free to change owner/name here
-      repository(owner: "facebook" name: "relay") {
-        name
-      }
+const RepositoryNameQuery = graphql`
+  query AppQuery {
+    user(login: "jporfirio") {
+      name
+      avatarUrl
     }
-  `).then((response) => {
-      if (!isMounted) return;
+  }
+`;
 
-      const { data } = response;
-      setName(data.repository.name);
-    });
-  }, []);
+const preloadedQuery = loadQuery(RelayEnvironment, RepositoryNameQuery, {});
 
-  return <div>{name}</div>;
+function App({ preloadedQuery }: { preloadedQuery: any }) {
+  const data = usePreloadedQuery<AppQuery>(RepositoryNameQuery, preloadedQuery);
+
+  return (
+    <div>
+      <p>Hi, mitch</p>
+    </div>
+  );
 }
 
-export default App;
-
-async function Fetch(query: string, variables?: string) {
-  const TOKEN = import.meta.env.VITE_GH_TOKEN;
-
-  const response = await fetch("https://api.github.com/graphql", {
-    method: `post`,
-    headers: {
-      Authorization: `bearer ${TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-
-  return response.json();
+function AppRoot() {
+  return (
+    <RelayEnvironmentProvider environment={RelayEnvironment}>
+      <Suspense fallback={"Loading..."}>
+        <App preloadedQuery={preloadedQuery} />
+      </Suspense>
+    </RelayEnvironmentProvider>
+  );
 }
+
+export default AppRoot;
